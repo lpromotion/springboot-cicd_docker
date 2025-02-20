@@ -35,7 +35,6 @@ jobs:
       run: |
         chmod +x gradlew # gradlew 실행 권한 부여
         ./gradlew build -x test # 테스트 실행 제외하고 빌드 진행 (테스트 포함하려면 `-x test` 제거)
-        ls -al build/libs  # JAR 파일이 있는지 확인
 
   # https://docs.docker.com/guides/java/configure-ci-cd/
   docker:
@@ -62,6 +61,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          context: . # 빌드 컨텍스트 설정 (현재 디렉토리)
           platforms: linux/amd64,linux/arm64 # 멀티 플랫폼 지원 (x86_64 & ARM64)
           push: true # Docker Hub에 푸시하도록 설정
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest  # Docker Hub 저장소에 태그 지정
