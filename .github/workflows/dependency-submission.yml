@@ -1,23 +1,33 @@
 # https://github.com/gradle/actions/blob/main/dependency-submission/README.md
+# GitHub → Settings → Code security → Dependency graph 활성화 필요
+# 이 워크플로우는 프로젝트의 의존성 정보를 GitHub Dependency Graph에 제출하여 보안 취약점 감지 및 종속성 관리를 자동화하는 데 사용됨
+
 name: Dependency Submission
 
+# 실행 트리거
 on:
   push:
-    branches: ['main']
+    branches: ['main'] # main 브랜치에 push될 때 실행됨
 
 permissions:
-  contents: write
+  contents: write # 종속성 데이터를 GitHub에 제출하기 위한 쓰기 권한 부여
 
 jobs:
   dependency-submission:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # 최신 Ubuntu 환경에서 실행됨
+
     steps:
+    # 최신 코드 가져오기 (git clone 역할)
     - name: Checkout sources
       uses: actions/checkout@v4
+
+    # Java 17 환경 설정 (Temurin JDK 사용)
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin'
-        java-version: 17
+        distribution: 'temurin' # Temurin JDK 사용
+        java-version: 17 # Java 17 버전 사용
+
+    # Gradle 종속성 그래프 생성 및 제출
     - name: Generate and submit dependency graph
-      uses: gradle/actions/dependency-submission@v4
+      uses: gradle/actions/dependency-submission@v4 # Gradle 프로젝트의 의존성 정보를 GitHub에 제출
