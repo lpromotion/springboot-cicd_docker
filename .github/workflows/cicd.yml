@@ -77,7 +77,7 @@ jobs:
         host: ${{ secrets.HOST }} # 원격 서버의 IP 또는 도메인
         username: ${{ secrets.SSH_USERNAME }} # 원격 서버의 SSH 사용자명
         key: ${{ secrets.PRIVATE_KEY }} # SSH Private Key
-        port: 22 # SSH 포트 (기본값 22)
+        port: 2222 # SSH 포트 (기본값 22)
         script: |
           # 기존 컨테이너 삭제
           sudo docker rm -f springboot || true
