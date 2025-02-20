@@ -63,10 +63,7 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64 # 멀티 플랫폼 지원 (x86_64 & ARM64)
           push: true # Docker Hub에 푸시하도록 설정
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest  # Docker Hub 저장소에 태그 지정
-            # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}  # 특정 커밋 태그
-            # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.ref_name }}  # 브랜치 기반 태그
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest  # Docker Hub 저장소에 태그 지정
 
   deploy:
     needs: docker # docker Job이 완료된 후 실행됨 (의존 관계 설정)
@@ -80,8 +77,15 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }} # 원격 서버의 SSH 사용자명
         key: ${{ secrets.PRIVATE_KEY }} # SSH Private Key
         port: 22 # SSH 포트 (기본값 22)
-        script: | # 원격 서버에서 실행할 명령어 목록
-          sudo docker rm -f springboot || true # 기존 컨테이너 삭제
-          sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest # Docker Hub에서 최신 이미지 가져오기
-          sudo docker run -d -p 8080:8080 --name springboot --restart=always ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest # 새 컨테이너 실행
-          sudo docker image prune -f # 사용하지 않는 이미지 정리 (디스크 공간 절약)
+        script: |
+          # 기존 컨테이너 삭제
+          sudo docker rm -f springboot || true
+
+          # Docker Hub에서 최신 이미지 가져오기
+          sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest 
+          
+          # 새 컨테이너 실행 (자동 재시작 옵션 포함)
+          sudo docker run -d -p 8080:8080 --name springboot --restart=always ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest 
+          
+          # 사용하지 않는 이미지 정리 (디스크 공간 절약)
+          sudo docker image prune -f 
