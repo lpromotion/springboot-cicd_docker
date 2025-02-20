@@ -35,7 +35,8 @@ jobs:
       run: |
         chmod +x gradlew # gradlew 실행 권한 부여
         ./gradlew build -x test # 테스트 실행 제외하고 빌드 진행 (테스트 포함하려면 `-x test` 제거)
-  
+        ls -al build/libs  # JAR 파일이 있는지 확인
+
   # https://docs.docker.com/guides/java/configure-ci-cd/
   docker:
     needs: build # build job이 완료된 후 실행됨 (의존 관계 설정)
