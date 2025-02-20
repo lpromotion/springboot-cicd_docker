@@ -1,5 +1,5 @@
-# OpenJDK 17 기반의 가벼운 Alpine Linux 이미지 사용 (멀티 아키텍처 지원)
-FROM eclipse-temurin:17-jdk-alpine
+# OpenJDK 17 기반 (멀티 플랫폼 지원)
+FROM eclipse-temurin:17-jdk
 
 # 애플리케이션 실행 디렉토리 설정
 WORKDIR /app
