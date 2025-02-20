@@ -1,0 +1,85 @@
+# https://github.com/actions/starter-workflows/blob/main/ci/gradle.yml
+name: Spring Boot CI/CD with Docker
+
+# 실행 트리거
+on: 
+  push:
+    branches: ["main"] # main 브랜치에 push될 때 실행됨
+
+permissions:
+      contents: read # 모든 Job에서 공통적으로 코드 읽기 권한만 부여
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 최신 Ubuntu 환경에서 실행됨
+
+    steps:
+    # 최신 코드 가져오기 (git clone 역할)
+    - uses: actions/checkout@v4 
+    
+    # Java 17 환경 설정 (Temurin JDK 사용)
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17' # Java 17 버전 설정
+        distribution: 'temurin' # Eclipse Temurin JDK 사용 (가장 많이 사용됨)
+    
+    # Gradle 설정 및 캐싱 자동 적용 (setup-gradle@v4 활용)
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4 # Gradle 캐싱을 활성화하여 빌드 속도 향상
+      with:
+        cache-read-only: false # 새로운 캐시를 생성하고 저장할 수 있도록 허용
+
+    # Gradle 빌드 실행
+    - name: Build with Gradle Wrapper
+      run: ./gradlew build -x test # 테스트 실행 제외하고 빌드 진행 (테스트 포함하려면 `-x test` 제거)
+  
+  # https://docs.docker.com/guides/java/configure-ci-cd/
+  docker:
+    needs: build # build job이 완료된 후 실행됨 (의존 관계 설정)
+    runs-on: ubuntu-latest
+
+    steps:
+      # 최신 코드 가져오기 (git clone 역할)
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Docker Hub 로그인 (이미지 푸시를 위해 필요)
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # Docker Hub 사용자명
+          password: ${{ secrets.DOCKERHUB_TOKEN }} # Docker Hub 액세스 토큰
+      
+      # Docker Buildx 설정 (멀티 플랫폼 빌드를 위해 사용)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Docker 이미지 빌드 및 푸시
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64 # 멀티 플랫폼 지원 (x86_64 & ARM64)
+          push: true # Docker Hub에 푸시하도록 설정
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest  # Docker Hub 저장소에 태그 지정
+            # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}  # 특정 커밋 태그
+            # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.ref_name }}  # 브랜치 기반 태그
+
+  deploy:
+    needs: docker # docker Job이 완료된 후 실행됨 (의존 관계 설정)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@master # 원격 서버에 SSH로 접속하여 명령 실행
+      with:
+        host: ${{ secrets.HOST }} # 원격 서버의 IP 또는 도메인
+        username: ${{ secrets.SSH_USERNAME }} # 원격 서버의 SSH 사용자명
+        key: ${{ secrets.PRIVATE_KEY }} # SSH Private Key
+        port: 22 # SSH 포트 (기본값 22)
+        script: | # 원격 서버에서 실행할 명령어 목록
+          sudo docker rm -f springboot || true # 기존 컨테이너 삭제
+          sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest # Docker Hub에서 최신 이미지 가져오기
+          sudo docker run -d -p 8080:8080 --name springboot --restart=always ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest # 새 컨테이너 실행
+          sudo docker image prune -f # 사용하지 않는 이미지 정리 (디스크 공간 절약)
